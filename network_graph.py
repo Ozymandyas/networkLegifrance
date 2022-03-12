@@ -3,9 +3,9 @@ import numpy as np
 import re
 import json
 from collections import defaultdict
+import streamlit as st
 import networkx as nx
 from pyvis.network import Network
-import streamlit as st
 import streamlit.components.v1 as components
 
 df = pd.read_json('CGI_r.json')
