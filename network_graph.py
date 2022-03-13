@@ -154,13 +154,13 @@ net.set_options(options)
 st.title("My network for CGI")
 
 try:
-    net.save_graph('tmp/pyvis_graph.html')
-    HtmlFile = open('tmp/pyvis_graph.html', 'r', encoding='utf-8')
+    net.save_graph('/tmp/pyvis_graph.html')
+    HtmlFile = open('/tmp/pyvis_graph.html', 'r', encoding='utf-8')
 
     # Save and read graph as HTML file (locally)
 except:
-    net.save_graph('html_files/pyvis_graph.html')
-    HtmlFile = open('html_files/pyvis_graph.html', 'r', encoding='utf-8')
+    net.save_graph('/html_files/pyvis_graph.html')
+    HtmlFile = open('/html_files/pyvis_graph.html', 'r', encoding='utf-8')
 
     # Load HTML file in HTML compon
     # ent for display on Streamlit page
