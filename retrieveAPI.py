@@ -24,7 +24,7 @@ for year in range(1980, 2023):
         "https://sandbox-api.piste.gouv.fr/dila/legifrance-beta/lf-engine-app/consult/code/tableMatieres",
         headers={'accept': 'application/json',
                  'Content-Type': 'application/json',
-                 'Authorization': 'Bearer hwpwT5k580MDDXZym8PPMhLV6MhvJnSBf7OpQmer85XQzWYjiVl8Jt'}, data=json.dumps({
+                 'Authorization': 'Bearer yourBearerToken'}, data=json.dumps({
                      "date": date,
                      "textId": "LEGITEXT000006069577"
                  }))
