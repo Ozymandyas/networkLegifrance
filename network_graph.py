@@ -3,10 +3,8 @@ import numpy as np
 import re
 import json
 from collections import defaultdict
-import streamlit as st
 import networkx as nx
 from pyvis.network import Network
-import streamlit.components.v1 as components
 
 df = pd.read_json('CGI_r.json')
 
@@ -151,14 +149,4 @@ net.set_options(options)
 # net.toggle_physics(False)
 # net.show("test_2022.html")
 
-st.title("My network for CGI")
-
-
 net.save_graph('pyvis_graph.html')
-HtmlFile = open('pyvis_graph.html', 'r', encoding='utf-8')
-
-# Save and read graph as HTML file (locally)
-
-# Load HTML file in HTML compon
-# ent for display on Streamlit page
-components.html(HtmlFile.read(), height=435)
