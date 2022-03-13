@@ -120,7 +120,7 @@ for _, article in list(df[(df.year == given_year) & mask].iterrows()):
     countRef(article)
     # we process the article
     processed_article = processArticle(
-        article["content"]).replace('articles', 'article').lower()
+        article["content"]).replace('articles', 'article').lower().replace(",", ".")
     # we check with the series in alphanumeric reverse to search for the larger match first
     # and then removes it, it will search first for 'article 36 ter.' and then
     # 'article 36 ter ' and after 'article 36.' and then 'article 36 '
