@@ -6,6 +6,7 @@ from collections import defaultdict
 import networkx as nx
 from pyvis.network import Network
 
+# we create our dataframe from our scraped json
 df = pd.read_json('CGI_r.json')
 
 # some codes didn't exist back then and vice versa, not an issue, I removed Code rural et de la pêche maritime
@@ -37,15 +38,19 @@ codes = ["Code de l\'action sociale et des familles", "Code de l\'artisanat", "C
          "Code des transports", "Code du travail", "Code du travail applicable à Mayotte", "Code du travail maritime",
          "Code de l'urbanisme", "Code de la voirie routière", "Code de l'industrie cinématographique", "Code des débits de boissons et des mesures contre l'alcoolisme"]
 
+# we initialize matches which is going to contain all matches in a {source1: [target1, ..., targetn], ..., source2: [target1, ..., targetn]} fashion
 matches = {}
 
+# just a part of the boolean mask applied to df
 mask = df.path.apply(lambda x: 'Code Général des Impôts' in x)
 
+# we want to remove refs to TFUE
 traite = ["article 107 du traité",
           "articles 107 et 108 du traité", "article 108 du traité"]
 
 
 def rangeReplacement(match):
+    """it's going to replace 'articles 1 à 3' by 'article 1 article 2 article 3'"""
     mystring = ""
     start = int(match.group(1))
     end = int(match.group(2))
@@ -54,74 +59,101 @@ def rangeReplacement(match):
     return mystring
 
 
+# we initialize a dict of list
 codes_count = defaultdict(list)
 
 
 def countRef(art):
+    """we want to count refs to TFUE and codes"""
     for code in codes:
         if code.lower() in art.content.lower():
-            codes_count[code].append(art["name"])
+            codes_count[art["name"]].append(code)
     for item in traite:
         if item.lower() in art.content.lower():
-            codes_count["Articles 107 et 108 du TFUE"].append(art["name"])
+            codes_count[art["name"]].append("Articles 107 et 108 du TFUE")
 
 
 def removeBefore(code):
-    return '.' * 20 + code
+    """we want to remove refs to codes but also what is before in order
+     not to match external articles
+     """
+    return '.' * 40 + code
 
 
 def processArticle(article):
+    """we process the article to use simple functions to match article"""
+    # we remove 'dispositions -0'
     for w in [*["-0", "-1", "-2", "-3"], *traite]:
         article = article.replace(w, "")
+    # we remove codes and 40 chars before
     for c in codes:
         article = re.sub(removeBefore(c), "", article)
 
+    # we replace 'article 1 à 3' by 'article 1 article 2 article 3'
     article = re.sub(r"articles* (\d+) à (\d+)", rangeReplacement, article)
 
+    # we replace 'article 2, 3' by 'article 2 article 3' recursively
     while True:
         output = re.sub(r"articles* (\d+) *(bis|ter|quater|quinquies|sexies|septies|octies|nonies|decies|undecies|duodecies|terdecies|quaterdecies|quindecies|sexdecies|septdecies|octodecies|novodecies|vicies)*, (\d+)", r"article \1 \2 article \3", article)
         if output == article:
             break
         article = output
+    # we replace 'article 2 et 3' by 'article 2 article 3' recursively
     while True:
         output = re.sub(r"articles* (\d+) *(bis|ter|quater|quinquies|sexies|septies|octies|nonies|decies|undecies|duodecies|terdecies|quaterdecies|quindecies|sexdecies|septdecies|octodecies|novodecies|vicies)* et (\d+)", r"article \1 \2 article \3", article)
         if output == article:
             break
         article = output
+    # we replace 'articles 1 à 3' by 'article 1 article 2 article 3' again to account for
+    # situations like 'articles 2 et 5 à 17'
     article = re.sub(r"articles* (\d+) à (\d+)", rangeReplacement, article)
     return article
 
 
-given_year = 2018
+# we give it the year we want to do
+given_year = 2022
+# we iterate over each article
 for _, article in list(df[(df.year == given_year) & mask].iterrows()):
+    # we initialize our keys in matches dict
     matches[article["name"]] = []
+    # we count refs to TFUE and code and put them in code_counts dict
     countRef(article)
+    # we process the article
     processed_article = processArticle(
         article["content"]).replace('articles', 'article').lower()
-    # we check with the series in reverse to search for the most large match first and then removes it
+    # we check with the series in alphanumeric reverse to search for the larger match first
+    # and then removes it, it will search first for 'article 36 ter.' and then
+    # 'article 36 ter ' and after 'article 36.' and then 'article 36 '
+    # matches are immediately appended to our matches dict and then removed
     for match in [*[x+'.' for x in df[(df.year == given_year) & mask].name.iloc[::-1]], *[x+' ' for x in df[(df.year == given_year) & mask].name.iloc[::-1]]]:
         if match.lower() in processed_article:
             matches[article["name"]].append(match[:-1])
             processed_article = processed_article.replace(match.lower(), "")
 
-dict_final = {**matches, **dict(codes_count)}
-# in 1980 you have 2094 articles but only 2085 nodes for articles are created because you have 9 articles with the same name...
+# we put everyting in a dict of list
+dict_final = {key: matches.get(key, [])+dict(codes_count).get(key, [])
+              for key in set(list(matches.keys())+list(dict(codes_count).keys()))}
 
 # we initialize our network with arrows and full screen
 net = Network(notebook=True, height='100%', width='100%', directed=True)
-# we create our network from our list
-G = nx.from_dict_of_lists(dict_final)
+# we create our network from our list, idk if nx.DiGraph is doing anything
+G = nx.from_dict_of_lists(dict_final, create_using=nx.DiGraph)
 
 # the nodes relative to external legislatives codes are bigger and in red their edges also
 for code in set(G.nodes).intersection(set(codes)):
     G.nodes[code]['color'] = 'red'
     G.nodes[code]['size'] = 20
-    for node in G[code]:
-        G[code][node]['color'] = 'red'
 
+# we put the edges in red
+for x in G.nodes:
+    for y in G[x]:
+        if y in codes:
+            G[x][y].update({'color': 'red'})
+
+# we use pyvis to create our graph from G
 net.from_nx(G)
-# it's going to add all missing nodes (orphan nodes) because nodes are not replicated
-net.add_nodes(list(df[(df.year == given_year) & mask].name))
+
+# these are options to allow for a better display of nodes and edges
 options = """
 var options = {
    "configure": {
@@ -144,9 +176,10 @@ var options = {
   }
 }
 """
-
+# we set the options
 net.set_options(options)
 # net.toggle_physics(False)
 # net.show("test_2022.html")
 
-net.save_graph('pyvis_graph.html')
+# we save the graph
+net.save_graph('test_2022_2.html')
