@@ -111,7 +111,7 @@ def processArticle(article):
 
 
 # we give it the year we want to do
-given_year = 2022
+given_year = 1980
 # we iterate over each article
 for _, article in list(df[(df.year == given_year) & mask].iterrows()):
     # we initialize our keys in matches dict
@@ -182,4 +182,4 @@ net.set_options(options)
 # net.show("test_2022.html")
 
 # we save the graph
-net.save_graph('test_2022_2.html')
+net.save_graph('1980.html')
