@@ -7,7 +7,7 @@ import networkx as nx
 from pyvis.network import Network
 
 # we create our dataframe from our scraped json
-df = pd.read_json('CGI_r.json')
+df = pd.read_json('CGI_r.json', encoding='utf-8')
 
 # we give it the year we want to do
 given_year = 1980
