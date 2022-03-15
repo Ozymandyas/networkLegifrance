@@ -9,6 +9,9 @@ from pyvis.network import Network
 # we create our dataframe from our scraped json
 df = pd.read_json('CGI_r.json')
 
+# we give it the year we want to do
+given_year = 1980
+
 # some codes didn't exist back then and vice versa, not an issue, I removed Code rural et de la pêche maritime
 codes = ["Code de l\'action sociale et des familles", "Code de l\'artisanat", "Code des assurances",
          "Code de l\'aviation civile", "Code du cinéma et de l\'image animée", "Code civil",
@@ -110,8 +113,6 @@ def processArticle(article):
     return article
 
 
-# we give it the year we want to do
-given_year = 1980
 # we iterate over each article
 for _, article in list(df[(df.year == given_year) & mask].iterrows()):
     # we initialize our keys in matches dict
@@ -138,6 +139,12 @@ dict_final = {key: matches.get(key, [])+dict(codes_count).get(key, [])
 net = Network(notebook=True, height='100%', width='100%', directed=True)
 # we create our network from our list, idk if nx.DiGraph is doing anything
 G = nx.from_dict_of_lists(dict_final, create_using=nx.DiGraph)
+
+# gets a pagerank, each node is attributed a score
+pr = nx.pagerank(G)
+
+# we sort and reverse the order so that the most important is first
+l = sorted(pr.keys(), key=lambda x: -pr[x])
 
 # the nodes relative to external legislatives codes are bigger and in red their edges also
 for code in set(G.nodes).intersection(set(codes)):
