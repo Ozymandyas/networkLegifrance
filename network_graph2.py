@@ -7,10 +7,7 @@ import networkx as nx
 from pyvis.network import Network
 
 # we create our dataframe from our scraped json
-df = pd.read_json('CGI_r.json', encoding='utf-8')
-
-# we give it the year we want to do
-given_year = 1980
+df = pd.read_json('CGI_r.json')
 
 # some codes didn't exist back then and vice versa, not an issue, I removed Code rural et de la pêche maritime
 codes = ["Code de l\'action sociale et des familles", "Code de l\'artisanat", "Code des assurances",
@@ -41,11 +38,16 @@ codes = ["Code de l\'action sociale et des familles", "Code de l\'artisanat", "C
          "Code des transports", "Code du travail", "Code du travail applicable à Mayotte", "Code du travail maritime",
          "Code de l'urbanisme", "Code de la voirie routière", "Code de l'industrie cinématographique", "Code des débits de boissons et des mesures contre l'alcoolisme"]
 
+given_year = 2022
+# we give it the year we want to do
+
 # we initialize matches which is going to contain all matches in a {source1: [target1, ..., targetn], ..., source2: [target1, ..., targetn]} fashion
 matches = {}
 
 # just a part of the boolean mask applied to df
 mask = df.path.apply(lambda x: 'Code Général des Impôts' in x)
+
+df_process = df[(df.year == given_year) & mask]
 
 # we want to remove refs to TFUE
 traite = ["article 107 du traité",
@@ -78,15 +80,15 @@ def countRef(art):
 
 def removeBefore(code):
     """we want to remove refs to codes but also what is before in order
-     not to match external articles
-     """
+    not to match external articles
+    """
     return '.' * 40 + code
 
 
 def processArticle(article):
     """we process the article to use simple functions to match article"""
-    # we remove 'dispositions -0'
-    for w in [*["-0", "-1", "-2", "-3"], *traite]:
+    # we remove 'dispositions -1' for example, not -0 because many articles use this format
+    for w in [*["-1", "-2", "-3"], *traite]:
         article = article.replace(w, "")
     # we remove codes and 40 chars before
     for c in codes:
@@ -110,23 +112,24 @@ def processArticle(article):
     # we replace 'articles 1 à 3' by 'article 1 article 2 article 3' again to account for
     # situations like 'articles 2 et 5 à 17'
     article = re.sub(r"articles* (\d+) à (\d+)", rangeReplacement, article)
+    article = article.replace('articles', 'article').lower().replace(
+        ",", " ").replace(".", " ").replace(";", " ")
     return article
 
 
 # we iterate over each article
-for _, article in list(df[(df.year == given_year) & mask].iterrows()):
+for _, article in list(df_process.iterrows()):
     # we initialize our keys in matches dict
     matches[article["name"]] = []
     # we count refs to TFUE and code and put them in code_counts dict
     countRef(article)
     # we process the article
-    processed_article = processArticle(
-        article["content"]).replace('articles', 'article').lower().replace(",", ".")
+    processed_article = processArticle(article["content"])
     # we check with the series in alphanumeric reverse to search for the larger match first
     # and then removes it, it will search first for 'article 36 ter.' and then
     # 'article 36 ter ' and after 'article 36.' and then 'article 36 '
     # matches are immediately appended to our matches dict and then removed
-    for match in [*[x+'.' for x in df[(df.year == given_year) & mask].name.iloc[::-1]], *[x+' ' for x in df[(df.year == given_year) & mask].name.iloc[::-1]]]:
+    for match in [*[x + ' ' for x in df_process.name.iloc[::-1]]]:
         if match.lower() in processed_article:
             matches[article["name"]].append(match[:-1])
             processed_article = processed_article.replace(match.lower(), "")
@@ -142,7 +145,6 @@ G = nx.from_dict_of_lists(dict_final, create_using=nx.DiGraph)
 
 # gets a pagerank, each node is attributed a score
 pr = nx.pagerank(G)
-
 # we sort and reverse the order so that the most important is first
 l = sorted(pr.keys(), key=lambda x: -pr[x])
 
@@ -151,16 +153,20 @@ for code in set(G.nodes).intersection(set(codes)):
     G.nodes[code]['color'] = 'red'
     G.nodes[code]['size'] = 20
 
-# we put the edges in red
+if G.has_node("Articles 107 et 108 du TFUE"):
+    G.nodes["Articles 107 et 108 du TFUE"]['color'] = 'black'
+    G.nodes["Articles 107 et 108 du TFUE"]['size'] = 20
+
+
 for x in G.nodes:
     for y in G[x]:
         if y in codes:
             G[x][y].update({'color': 'red'})
+        if y == "Articles 107 et 108 du TFUE":
+            G[x][y].update({'color': 'black'})
 
-# we use pyvis to create our graph from G
 net.from_nx(G)
 
-# these are options to allow for a better display of nodes and edges
 options = """
 var options = {
    "configure": {
@@ -183,10 +189,7 @@ var options = {
   }
 }
 """
-# we set the options
+
 net.set_options(options)
 # net.toggle_physics(False)
-# net.show("test_2022.html")
-
-# we save the graph
-net.save_graph('1980.html')
+net.save_graph(f"img_{given_year}.html")
