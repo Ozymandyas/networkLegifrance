@@ -54,6 +54,28 @@ traite = ["article 107 du traité",
           "articles 107 et 108 du traité", "article 108 du traité"]
 
 
+# subsequent lines were an attempt to use a better approach to find patterns such as
+# 'article 2 ter à 34 bis' using the fact that we operate on a discrete
+# dataset and limiting the complexity by checking only 30 articles after
+# it was checking all possible matches and appending based on the finite list of
+# articles and was designed to be used with the implemented approach
+# but it was returning less edges and not more which is strange and needs more
+# investigation
+
+# df_list = df[(df.year == given_year) & mask]['name'].str.lower()
+# df_list_without_article = [name.replace("article ", "") for name in df_list]
+
+# crosses = []
+
+# for x in df_list_without_article:
+#   for y in df_list_without_article[df_list_without_article.index(x)+1:]:
+#     if df_list_without_article.index(y) - df_list_without_article.index(x) < 30:
+#       crosses.append([x, y])
+#     else:
+#       break
+
+# myreg = '|'.join(list(map(lambda item: "article " + item[0] + ' à ' + item[1], crosses)))
+
 def rangeReplacement(match):
     """it's going to replace 'articles 1 à 3' by 'article 1 article 2 article 3'"""
     mystring = ""
@@ -93,6 +115,9 @@ def processArticle(article):
     # we remove codes and 40 chars before
     for c in codes:
         article = re.sub(removeBefore(c), "", article)
+
+    # part of the failed attempt to use a less naive technique
+    #article = re.sub(myreg, replaceText, article.replace("articles", "article"))
 
     # we replace 'article 1 à 3' by 'article 1 article 2 article 3'
     article = re.sub(r"articles* (\d+) à (\d+)", rangeReplacement, article)
