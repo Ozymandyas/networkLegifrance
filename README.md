@@ -9,5 +9,3 @@
 - common_words.csv is a dictionnary of 5000 words i used to analyse the aggregated 6 books (CGI + annexe 1 à 4 + LPF) for 1980 and 2022
 - 5000words.csv is the resulting data of this analysis where one can see increases in occurences of the words
 - dictionnary_analysis.ipynb is a jupyter notebook used to make research with this dictionnary and take screens
-- ml.py was an attempt to use machine learning to study wording over the years but it failed because of packages-related issues
-- script4.py is a script of scripts to plot some data about the CGI.
